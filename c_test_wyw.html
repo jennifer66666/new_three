@@ -83,6 +83,59 @@
 				scene.add( moon );
 
                 
+                // 测试新雪花
+                const materials = [];
+                scene.fog = new THREE.FogExp2( 0x000000, 0.0008 );
+
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+
+                const textureLoader_snow = new THREE.TextureLoader();
+
+                const sprite1 = textureLoader_snow.load( './textures/sprites/snowflake1.png' );
+                const sprite2 = textureLoader_snow.load( './textures/sprites/snowflake2.png' );
+                const sprite3 = textureLoader_snow.load( './textures/sprites/snowflake3.png' );
+                const sprite4 = textureLoader_snow.load( './textures/sprites/snowflake4.png' );
+                const sprite5 = textureLoader_snow.load( './textures/sprites/snowflake5.png' );
+
+                for ( let i = 0; i < 50000; i ++ ) {
+
+                    const x = Math.random() * 2000 - 1000;
+                    const y = Math.random() * 2000 - 1000;
+                    const z = Math.random() * 2000 - 1000;
+
+                    vertices.push( x, y, z );
+
+                }
+
+                geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+
+                var parameters = [
+                    [[ 1.0, 0.2, 0.5 ], sprite2, 10 ],
+                    [[ 0.95, 0.1, 0.5 ], sprite3, 7 ],
+                    [[ 0.90, 0.05, 0.5 ], sprite1, 5 ],
+                    [[ 0.85, 0, 0.5 ], sprite5, 4 ],
+                    [[ 0.80, 0, 0.5 ], sprite4, 2 ]
+                ];
+
+                for ( let i = 0; i < parameters.length; i ++ ) {
+
+                    const color = parameters[ i ][ 0 ];
+                    const sprite = parameters[ i ][ 1 ];
+                    const size = parameters[ i ][ 2 ];
+
+                    materials[ i ] = new THREE.PointsMaterial( { size: size, map: sprite, blending: THREE.AdditiveBlending, depthTest: false, transparent: true } );
+                    materials[ i ].color.setHSL( color[ 0 ], color[ 1 ], color[ 2 ] );
+
+                    const particles = new THREE.Points( geometry, materials[ i ] );
+
+                    particles.rotation.x = Math.random() * 6;
+                    particles.rotation.y = Math.random() * 6;
+                    particles.rotation.z = Math.random() * 6;
+
+                    scene.add( particles );
+
+                }
 
 				//
 
@@ -140,11 +193,27 @@
 
 			function animate() {
 
-				requestAnimationFrame( animate );
+				
 
 				const elapsed = clock.getElapsedTime();
 
 				moon.position.set( Math.sin( elapsed ) * 5, 0, Math.cos( elapsed ) * 5 );
+                //以下新雪花片旋转
+                const time = Date.now() * 0.00005;
+                for ( let i = 0; i < scene.children.length; i ++ ) {
+
+                const object = scene.children[ i ];
+
+                if ( object instanceof THREE.Points ) {
+
+                    object.rotation.y = time * ( i < 4 ? i + 1 : - ( i + 1 ) );
+
+                }
+
+                }
+                // 以上雪花片旋转
+
+                requestAnimationFrame( animate );
 
 				renderer.render( scene, camera );
 				labelRenderer.render( scene, camera );
