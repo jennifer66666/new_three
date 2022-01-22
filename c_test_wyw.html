@@ -25,17 +25,23 @@
 			import { CSS2DRenderer, CSS2DObject } from './jsm/renderers/CSS2DRenderer.js';
             import { TrackballControls } from './jsm/controls/TrackballControls.js';
             import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+            import Stats from './jsm/libs/stats.module.js';
 			let camera, scene, renderer, labelRenderer;
+            let container, stats;
+            let prevTime = Date.now();
 
 			const clock = new THREE.Clock();
 			const textureLoader = new THREE.TextureLoader();
 
 			let moon;
+            let mixer;
 
 			init();
 			animate();
 
 			function init() {
+                container = document.createElement( 'div' );
+				document.body.appendChild( container );
 
 				const EARTH_RADIUS = 1;
 				const MOON_RADIUS = 0.27;
@@ -173,7 +179,7 @@
 				controls.maxDistance = 100;
 
                 //加马
-                let mesh_horse,mixer
+                let mesh_horse
                 const loader = new GLTFLoader();
 				loader.load( "./models/Horse.glb", function ( gltf ) {
 
@@ -187,6 +193,9 @@
 
 				} );
 				//
+                stats = new Stats();
+				container.appendChild( stats.dom );
+                //
 
 				window.addEventListener( 'resize', onWindowResize );
 
@@ -204,10 +213,12 @@
 
 			}
 
-
-			function animate() {
-
-				
+            function animate() {
+            requestAnimationFrame( animate );
+            render();
+            stats.update();
+            }
+			function render() {
 
 				const elapsed = clock.getElapsedTime();
 
@@ -227,11 +238,21 @@
                 }
                 // 以上雪花片旋转
 
-                requestAnimationFrame( animate );
 
 				renderer.render( scene, camera );
 				labelRenderer.render( scene, camera );
 
+                if ( mixer ) {
+
+                const time = Date.now();
+
+                mixer.update( ( time - prevTime ) * 0.001 );
+
+                prevTime = time;
+
+                }
+
+                renderer.render( scene, camera );
 			}
 
 		</script>
