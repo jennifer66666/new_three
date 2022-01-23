@@ -42,7 +42,7 @@
                 container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
-				const EARTH_RADIUS = 15;
+				const EARTH_RADIUS = 30;
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 200 );
 				camera.position.set( 20, 10, 40 );
@@ -60,18 +60,19 @@
                 // rotate and position the plane
                 plane.rotation.x = -0.5 * Math.PI;
                 plane.position.x = 0;
-                plane.position.y = 0;
+                plane.position.y = - EARTH_RADIUS;
                 plane.position.z = 0;
 
                 scene.add(plane);
+                plane.receiveShadow = true;
 
                 var spotLight = new THREE.SpotLight(0xffffff);
-                spotLight.position.set(0, 30, 40);
-                spotLight.shadow.mapSize.width = 2048;
-                spotLight.shadow.mapSize.height = 2048;
+                spotLight.position.set(0, 20, 80);
+                spotLight.shadow.mapSize.width = 256;
+                spotLight.shadow.mapSize.height = 256;
                 spotLight.shadow.camera.fov = 15;
                 spotLight.castShadow = true;
-                spotLight.decay = 2;
+                spotLight.decay = 20;
                 spotLight.penumbra = 0.05;
                 spotLight.name = "spotLight"
 
@@ -104,8 +105,8 @@
 					transparent: true
 				} );
 				const earth = new THREE.Mesh( earthGeometry, earthMaterial );
-                earth.translateY(15);
 				scene.add( earth );
+                earth.castShadow = false;
 
                 
                 // 测试新雪花
@@ -123,11 +124,15 @@
                 const sprite4 = textureLoader_snow.load( './textures/sprites/snowflake4.png' );
                 const sprite5 = textureLoader_snow.load( './textures/sprites/snowflake5.png' );
 
-                for ( let i = 0; i < 50000; i ++ ) {
+                for ( let i = 0; i < 800; i ++ ) {
 
-                    const x = Math.random() * 2000 - 1000;
-                    const y = Math.random() * 2000 - 1000;
-                    const z = Math.random() * 2000 - 1000;
+                    const x = Math.random() * EARTH_RADIUS * 2 - EARTH_RADIUS;
+                    const y = Math.random() * EARTH_RADIUS * 2 - EARTH_RADIUS;
+                    const z = Math.random() * EARTH_RADIUS * 2 - EARTH_RADIUS;
+
+                    if (x * x + y * y + z * z > (EARTH_RADIUS * EARTH_RADIUS)* 0.95 ){
+                        continue;
+                    }
 
                     vertices.push( x, y, z );
 
@@ -136,11 +141,11 @@
                 geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
 
                 var parameters = [
-                    [[ 1.0, 0.2, 0.5 ], sprite2, 10 ],
-                    [[ 0.95, 0.1, 0.5 ], sprite3, 7 ],
-                    [[ 0.90, 0.05, 0.5 ], sprite1, 5 ],
-                    [[ 0.85, 0, 0.5 ], sprite5, 4 ],
-                    [[ 0.80, 0, 0.5 ], sprite4, 2 ]
+                    [[ 1.0, 0.2, 0.5 ], sprite2, 3 ],
+                    [[ 0.95, 0.1, 0.5 ], sprite3, 1 ],
+                    [[ 0.90, 0.05, 0.5 ], sprite1, 0.3 ],
+                    [[ 0.85, 0, 0.5 ], sprite5, 1 ],
+                    [[ 0.80, 0, 0.5 ], sprite4, 0.2 ]
                 ];
 
                 for ( let i = 0; i < parameters.length; i ++ ) {
@@ -178,6 +183,9 @@
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
                 renderer.setClearColor(0x463f67, 1);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMapSoft = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 				document.body.appendChild( renderer.domElement );
 
                 const controls = new OrbitControls( camera, renderer.domElement );
@@ -190,11 +198,12 @@
 				loader.load( "./models/Horse.glb", function ( gltf ) {
 
 					mesh_horse = gltf.scene.children[ 0 ];
-					mesh_horse.scale.set( 0.06, 0.06, 0.06 );
+					mesh_horse.scale.set( 0.13, 0.13, 0.13 );
 					scene.add( mesh_horse );
-                    mesh_horse.translateY(7);
+                    mesh_horse.translateY(- EARTH_RADIUS/2);
 
 					mixer = new THREE.AnimationMixer( mesh_horse );
+                    mesh_horse.castShadow = true;
 
 					mixer.clipAction( gltf.animations[ 0 ] ).setDuration( 1 ).play();
 
