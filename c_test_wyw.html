@@ -45,29 +45,43 @@
 				const EARTH_RADIUS = 30;
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 200 );
-				camera.position.set( 20, 10, 40 );
+				camera.position.set( -35, 10, 0 );
+
+				//cubemap
+				const path = './textures/cube/pisa/';
+				const format = '.png';
+				const urls = [
+					path + 'px' + format, path + 'nx' + format,
+					path + 'py' + format, path + 'ny' + format,
+					path + 'pz' + format, path + 'nz' + format
+				];
+
+				const reflectionCube = new THREE.CubeTextureLoader().load( urls );
+				const refractionCube = new THREE.CubeTextureLoader().load( urls );
+				refractionCube.mapping = THREE.CubeRefractionMapping;
 
 				scene = new THREE.Scene();
+				scene.background = reflectionCube;
 
-                //大地面
-                var planeGeometry = new THREE.PlaneGeometry(10000, 10000);
-                var planeMaterial = new THREE.MeshPhongMaterial({
-                    color: 0xffffff
-                });
-                var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-                plane.receiveShadow = true;
+                // //大地面
+                // var planeGeometry = new THREE.PlaneGeometry(10000, 10000);
+                // var planeMaterial = new THREE.MeshPhongMaterial({
+                //     color: 0xffffff
+                // });
+                // var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                // plane.receiveShadow = true;
 
-                // rotate and position the plane
-                plane.rotation.x = -0.5 * Math.PI;
-                plane.position.x = 0;
-                plane.position.y = - EARTH_RADIUS;
-                plane.position.z = 0;
+                // // rotate and position the plane
+                // plane.rotation.x = -0.5 * Math.PI;
+                // plane.position.x = 0;
+                // plane.position.y = - EARTH_RADIUS;
+                // plane.position.z = 0;
 
-                scene.add(plane);
-                plane.receiveShadow = true;
+                // scene.add(plane);
+                // plane.receiveShadow = true;
 
                 var spotLight = new THREE.SpotLight(0xffffff);
-                spotLight.position.set(0, 20, 80);
+                spotLight.position.set(-10, 20, 0);
                 spotLight.shadow.mapSize.width = 256;
                 spotLight.shadow.mapSize.height = 256;
                 spotLight.shadow.camera.fov = 15;
@@ -102,7 +116,8 @@
                     lightIntensity: 1,
                     exposure: 1,
                     side: THREE.DoubleSide,
-					transparent: true
+					transparent: true,
+                    envMap: refractionCube
 				} );
 				const earth = new THREE.Mesh( earthGeometry, earthMaterial );
 				scene.add( earth );
@@ -190,7 +205,7 @@
 
                 const controls = new OrbitControls( camera, renderer.domElement );
 				controls.minDistance = 5;
-				controls.maxDistance = 100;
+				controls.maxDistance = 300;
 
                 //加马
                 let mesh_horse
