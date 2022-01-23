@@ -1,396 +1,300 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 	<head>
 		<meta charset="utf-8">
-		<title>three.js examples</title>
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<link rel="shortcut icon" href="../files/favicon_white.ico" media="(prefers-color-scheme: dark)"/>
-		<link rel="shortcut icon" href="../files/favicon.ico" media="(prefers-color-scheme: light)" />
-		<link rel="stylesheet" type="text/css" href="../files/main.css">
+		<title>three.js css2d - label</title>
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<style>
+			.label {
+				color: #FFF;
+				font-family: sans-serif;
+				padding: 2px;
+				background: rgba( 0, 0, 0, .6 );
+			}
+		</style>
 	</head>
 	<body>
+		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> css2d - label</div>
 
-		<div id="panel">
+		<script type="module">
 
-			<div id="header">
-				<h1><a href="https://threejs.org">three.js</a></h1>
+			import * as THREE from '../build/three.module.js';
 
-				<div id="sections">
-					<a href="../docs/index.html#manual/introduction/Creating-a-scene">docs</a>
-					<span class="selected">examples</span>
-				</div>
+			import { OrbitControls } from './jsm/controls/OrbitControls.js';
+			import { CSS2DRenderer, CSS2DObject } from './jsm/renderers/CSS2DRenderer.js';
+            import { TrackballControls } from './jsm/controls/TrackballControls.js';
+            import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+            import Stats from './jsm/libs/stats.module.js';
+            import {ParametricGeometry} from './jsm/geometries/ParametricGeometry.js';
+			let camera, scene, renderer, labelRenderer;
+            let container, stats;
+            let prevTime = Date.now();
 
-				<div id="expandButton"></div>
-			</div>
+			const clock = new THREE.Clock();
+			const textureLoader = new THREE.TextureLoader();
 
-			<div id="panelScrim"></div>
+            let mixer;
 
-			<div id="contentWrapper">
+			init();
+			animate();
 
-				<div id="inputWrapper">
-					<input placeholder="" type="text" id="filterInput" autocorrect="off" autocapitalize="off" spellcheck="false" />
-					<div id="exitSearchButton"></div>
-				</div>
+			function init() {
+                container = document.createElement( 'div' );
+				document.body.appendChild( container );
 
-				<div id="content">
-					<img id="previewsToggler" src="./files/thumbnails.svg" width="20" height="20" />
-				</div>
-			</div>
+				const EARTH_RADIUS = 30;
 
-		</div>
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 200 );
+				camera.position.set( -35, 10, 0 );
 
-		<iframe id="viewer" name="viewer" allow="fullscreen; xr-spatial-tracking;"></iframe>
+				//cubemap
+				const path = './textures/cube/pisa/';
+				const format = '.png';
+				const urls = [
+					path + 'px' + format, path + 'nx' + format,
+					path + 'py' + format, path + 'ny' + format,
+					path + 'pz' + format, path + 'nz' + format
+				];
 
-		<a id="button" target="_blank"><img src="../files/ic_code_black_24dp.svg"></a>
+				const reflectionCube = new THREE.CubeTextureLoader().load( urls );
+				const refractionCube = new THREE.CubeTextureLoader().load( urls );
+				refractionCube.mapping = THREE.CubeRefractionMapping;
 
-		<script>
+				scene = new THREE.Scene();
+				scene.background = reflectionCube;
 
-		const panel = document.getElementById( 'panel' );
-		const content = document.getElementById( 'content' );
-		const viewer = document.getElementById( 'viewer' );
-		const filterInput = document.getElementById( 'filterInput' );
-		const exitSearchButton = document.getElementById( 'exitSearchButton' );
-		const expandButton = document.getElementById( 'expandButton' );
-		const viewSrcButton = document.getElementById( 'button' );
-		const panelScrim = document.getElementById( 'panelScrim' );
-		const previewsToggler = document.getElementById( 'previewsToggler' );
+                // //大地面
+                // var planeGeometry = new THREE.PlaneGeometry(10000, 10000);
+                // var planeMaterial = new THREE.MeshPhongMaterial({
+                //     color: 0xffffff
+                // });
+                // var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                // plane.receiveShadow = true;
 
-		const sectionLink = document.querySelector( '#sections > a' );
-		const sectionDefaultHref = sectionLink.href;
+                // // rotate and position the plane
+                // plane.rotation.x = -0.5 * Math.PI;
+                // plane.position.x = 0;
+                // plane.position.y = - EARTH_RADIUS;
+                // plane.position.z = 0;
 
-		const links = {};
-		const validRedirects = new Map();
-		const container = document.createElement( 'div' );
+                // scene.add(plane);
+                // plane.receiveShadow = true;
 
-		let selected = null;
+                var spotLight = new THREE.SpotLight(0xffffff);
+                spotLight.position.set(-10, 20, 0);
+                spotLight.shadow.mapSize.width = 256;
+                spotLight.shadow.mapSize.height = 256;
+                spotLight.shadow.camera.fov = 15;
+                spotLight.castShadow = true;
+                spotLight.decay = 20;
+                spotLight.penumbra = 0.05;
+                spotLight.name = "spotLight"
 
-		init();
+                scene.add(spotLight);
 
-		async function init() {
+                var ambientLight = new THREE.AmbientLight(0x343434);
+                ambientLight.name = "ambientLight";
+                scene.add(ambientLight);
 
-			content.appendChild( container );
+				const axesHelper = new THREE.AxesHelper( 5 );
+				scene.add( axesHelper );
 
-			viewSrcButton.style.display = 'none';
+				//
 
-			const files = await ( await fetch( 'files.json' ) ).json();
-			const tags = await ( await fetch( 'tags.json' ) ).json();
+				const earthGeometry = new THREE.SphereGeometry( EARTH_RADIUS, 16, 16 );
+				const earthMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0xffffff,
+                    transmission: 1.0,
+                    opacity: 1,
+                    metalness: 0,
+                    roughness: 0,
+                    ior: 1.5,
+                    thickness: 0.01,
+                    specularIntensity: 1,
+                    specularColor: 0xffffff,
+                    envMapIntensity: 1,
+                    lightIntensity: 1,
+                    exposure: 1,
+                    side: THREE.DoubleSide,
+					transparent: true,
+                    envMap: refractionCube
+				} );
+				const earth = new THREE.Mesh( earthGeometry, earthMaterial );
+				scene.add( earth );
+                earth.castShadow = false;
 
-			for ( const key in files ) {
+                
+                // 测试新雪花
+                const materials = [];
+                scene.fog = new THREE.FogExp2( 0x000000, 0.0008 );
 
-				const section = files[ key ];
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
 
-				const header = document.createElement( 'h2' );
-				header.textContent = key;
-				header.setAttribute( 'data-category', key );
-				container.appendChild( header );
+                const textureLoader_snow = new THREE.TextureLoader();
 
-				for ( let i = 0; i < section.length; i ++ ) {
+                const sprite1 = textureLoader_snow.load( './textures/sprites/snowflake1.png' );
+                const sprite2 = textureLoader_snow.load( './textures/sprites/snowflake2.png' );
+                const sprite3 = textureLoader_snow.load( './textures/sprites/snowflake3.png' );
+                const sprite4 = textureLoader_snow.load( './textures/sprites/snowflake4.png' );
+                const sprite5 = textureLoader_snow.load( './textures/sprites/snowflake5.png' );
 
-					const file = section[ i ];
+                for ( let i = 0; i < 800; i ++ ) {
 
-					const link = createLink( file );
-					container.appendChild( link );
+                    const x = Math.random() * EARTH_RADIUS * 2 - EARTH_RADIUS;
+                    const y = Math.random() * EARTH_RADIUS * 2 - EARTH_RADIUS;
+                    const z = Math.random() * EARTH_RADIUS * 2 - EARTH_RADIUS;
 
-					links[ file ] = link;
-					validRedirects.set( file, file + '.html' );
+                    if (x * x + y * y + z * z > (EARTH_RADIUS * EARTH_RADIUS)* 0.95 ){
+                        continue;
+                    }
 
-				}
+                    vertices.push( x, y, z );
+
+                }
+
+                geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+
+                var parameters = [
+                    [[ 1.0, 0.2, 0.5 ], sprite2, 3 ],
+                    [[ 0.95, 0.1, 0.5 ], sprite3, 1 ],
+                    [[ 0.90, 0.05, 0.5 ], sprite1, 0.3 ],
+                    [[ 0.85, 0, 0.5 ], sprite5, 1 ],
+                    [[ 0.80, 0, 0.5 ], sprite4, 0.2 ]
+                ];
+
+                for ( let i = 0; i < parameters.length; i ++ ) {
+
+                    const color = parameters[ i ][ 0 ];
+                    const sprite = parameters[ i ][ 1 ];
+                    const size = parameters[ i ][ 2 ];
+
+                    materials[ i ] = new THREE.PointsMaterial( { size: size, map: sprite, blending: THREE.AdditiveBlending, depthTest: false, transparent: true } );
+                    materials[ i ].color.setHSL( color[ 0 ], color[ 1 ], color[ 2 ] );
+
+                    const particles = new THREE.Points( geometry, materials[ i ] );
+
+                    particles.rotation.x = Math.random() * 6;
+                    particles.rotation.y = Math.random() * 6;
+                    particles.rotation.z = Math.random() * 6;
+
+                    scene.add( particles );
+
+                }
+
+				//
+
+				const earthDiv = document.createElement( 'div' );
+				earthDiv.className = 'label';
+				earthDiv.textContent = 'Earth';
+				earthDiv.style.marginTop = '-1em';
+				const earthLabel = new CSS2DObject( earthDiv );
+				earthLabel.position.set( 0, EARTH_RADIUS, 0 );
+				earth.add( earthLabel );
+
+				//
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setClearColor(0x463f67, 1);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMapSoft = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+				document.body.appendChild( renderer.domElement );
+
+                const controls = new OrbitControls( camera, renderer.domElement );
+				controls.minDistance = 5;
+				controls.maxDistance = 300;
+
+                // 加地面
+                var geom  = new THREE.PlaneGeometry(35, 35);
+                var material = new THREE.MeshLambertMaterial( { color: 0xffee00, envMap: refractionCube, refractionRatio: 0.95 } );
+                material.side = THREE.DoubleSide;
+                var wave_plane = new THREE.Mesh(geom, material)
+                wave_plane.receiveShadow = true;
+
+                // // rotate and position the plane
+                wave_plane.rotation.x = -0.5 * Math.PI;
+                wave_plane.translateZ(-14);
+                scene.add(wave_plane);
+
+                //加马
+                let mesh_horse
+                const loader = new GLTFLoader();
+				loader.load( "./models/Horse.glb", function ( gltf ) {
+
+					mesh_horse = gltf.scene.children[ 0 ];
+					mesh_horse.scale.set( 0.13, 0.13, 0.13 );
+					scene.add( mesh_horse );
+                    mesh_horse.translateY(- EARTH_RADIUS/2);
+
+					mixer = new THREE.AnimationMixer( mesh_horse );
+                    mesh_horse.castShadow = true;
+
+					mixer.clipAction( gltf.animations[ 0 ] ).setDuration( 1 ).play();
+
+				} );
+				//
+                stats = new Stats();
+				container.appendChild( stats.dom );
+                //
+
+				window.addEventListener( 'resize', onWindowResize );
 
 			}
 
-			if ( window.location.hash !== '' ) {
+			function onWindowResize() {
 
-				const file = window.location.hash.substring( 1 );
+				camera.aspect = window.innerWidth / window.innerHeight;
 
-				// use a predefined map of redirects to avoid untrusted URL redirection due to user-provided value
+				camera.updateProjectionMatrix();
 
-				if ( validRedirects.has( file ) === true ) {
-
-					selectFile( file );
-					viewer.src = validRedirects.get( file );
-					viewer.style.display = 'unset';
-
-				}
+				renderer.setSize( window.innerWidth, window.innerHeight );
 
 			}
 
-			filterInput.value = extractQuery();
+            function animate() {
+            requestAnimationFrame( animate );
+            render();
+            stats.update();
+            }
+			function render() {
 
-			if ( filterInput.value !== '' ) {
+				const elapsed = clock.getElapsedTime();
 
-				panel.classList.add( 'searchFocused' );
+                //以下新雪花片旋转
+                const time = Date.now() * 0.00005;
+                for ( let i = 0; i < scene.children.length; i ++ ) {
 
-				updateFilter( files, tags );
+                const object = scene.children[ i ];
 
-			} else {
+                if ( object instanceof THREE.Points ) {
 
-				updateLink( '' );
+                    object.rotation.y = time * ( i < 4 ? i + 1 : - ( i + 1 ) );
 
+                }
+
+                }
+                // 以上雪花片旋转
+
+
+				renderer.render( scene, camera );
+
+                if ( mixer ) {
+
+                const time = Date.now();
+
+                mixer.update( ( time - prevTime ) * 0.001 );
+
+                prevTime = time;
+
+                }
+
+                renderer.render( scene, camera );
 			}
-
-			// Events
-
-			filterInput.onfocus = function ( ) {
-
-				panel.classList.add( 'searchFocused' );
-
-			};
-
-			filterInput.onblur = function ( ) {
-
-				if ( filterInput.value === '' ) {
-
-					panel.classList.remove( 'searchFocused' );
-
-				}
-
-			};
-
-			exitSearchButton.onclick = function ( ) {
-
-				filterInput.value = '';
-				updateFilter( files, tags );
-				panel.classList.remove( 'searchFocused' );
-
-			};
-
-			filterInput.addEventListener( 'input', function () {
-
-				updateFilter( files, tags );
-
-			} );
-
-
-			expandButton.addEventListener( 'click', function ( event ) {
-
-				event.preventDefault();
-				panel.classList.toggle( 'open' );
-
-			} );
-
-			panelScrim.onclick = function ( event ) {
-
-				event.preventDefault();
-				panel.classList.toggle( 'open' );
-
-			};
-
-			previewsToggler.onclick = function ( event ) {
-
-				event.preventDefault();
-				content.classList.toggle( 'minimal' );
-
-			};
-
-			// iOS iframe auto-resize workaround
-
-			if ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) {
-
-				viewer.style.width = getComputedStyle( viewer ).width;
-				viewer.style.height = getComputedStyle( viewer ).height;
-				viewer.setAttribute( 'scrolling', 'no' );
-
-			}
-
-		}
-
-		function createLink( file ) {
-
-			const template = `
-				<div class="card">
-					<a href="${file}.html" target="viewer">
-						<div class="cover">
-							<img src="screenshots/${ file }.jpg" loading="lazy" width="400" />
-						</div>
-						<div class="title">${getName( file )}</div>
-					</a>
-				</div>
-			`;
-
-			const link = createElementFromHTML( template );
-
-			link.querySelector( 'a[target="viewer"]' ).addEventListener( 'click', function ( event ) {
-
-				if ( event.button !== 0 || event.ctrlKey || event.altKey || event.metaKey ) return;
-
-				selectFile( file );
-
-			} );
-
-			return link;
-
-		}
-
-		function selectFile( file ) {
-
-			if ( selected !== null ) links[ selected ].classList.remove( 'selected' );
-
-			links[ file ].classList.add( 'selected' );
-
-			window.location.hash = file;
-			viewer.focus();
-			viewer.style.display = 'unset';
-
-			panel.classList.remove( 'open' );
-
-			selected = file;
-
-			// Reveal "View source" button and set attributes to this example
-			viewSrcButton.style.display = '';
-			viewSrcButton.href = 'https://github.com/mrdoob/three.js/blob/master/examples/' + selected + '.html';
-			viewSrcButton.title = 'View source code for ' + getName( selected ) + ' on GitHub';
-
-		}
-
-		function updateFilter( files, tags ) {
-
-			let v = filterInput.value.trim();
-			v = v.replace( /\s+/gi, ' ' ); // replace multiple whitespaces with a single one
-
-			if ( v !== '' ) {
-
-				window.history.replaceState( {}, '', '?q=' + v + window.location.hash );
-
-			} else {
-
-				window.history.replaceState( {}, '', window.location.pathname + window.location.hash );
-
-			}
-
-			const exp = new RegExp( v, 'gi' );
-
-			for ( const key in files ) {
-
-				const section = files[ key ];
-
-				for ( let i = 0; i < section.length; i ++ ) {
-
-					filterExample( section[ i ], exp, tags );
-
-				}
-
-			}
-
-			layoutList( files );
-
-			updateLink( v );
-
-		}
-
-		function updateLink( search ) {
-
-			// update docs link
-
-			if ( search ) {
-
-				let link = sectionLink.href.split( /[?#]/ )[ 0 ];
-				sectionLink.href = `${link}?q=${search}`;
-
-			} else {
-
-				sectionLink.href = sectionDefaultHref;
-
-			}
-
-		}
-
-		function filterExample( file, exp, tags ) {
-
-			const link = links[ file ];
-			const name = getName( file );
-			if ( file in tags ) file += ' ' + tags[ file ].join( ' ' );
-			const res = file.match( exp );
-			let text;
-
-			if ( res && res.length > 0 ) {
-
-				link.classList.remove( 'hidden' );
-
-				for ( let i = 0; i < res.length; i ++ ) {
-
-					text = name.replace( res[ i ], '<b>' + res[ i ] + '</b>' );
-
-				}
-
-				link.querySelector( '.title' ).innerHTML = text;
-
-			} else {
-
-				link.classList.add( 'hidden' );
-				link.querySelector( '.title' ).innerHTML = name;
-
-			}
-
-		}
-
-		function getName( file ) {
-
-			const name = file.split( '_' );
-			name.shift();
-			return name.join( ' / ' );
-
-		}
-
-		function layoutList( files ) {
-
-			for ( const key in files ) {
-
-				let collapsed = true;
-
-				const section = files[ key ];
-
-				for ( let i = 0; i < section.length; i ++ ) {
-
-					const file = section[ i ];
-
-					if ( links[ file ].classList.contains( 'hidden' ) === false ) {
-
-						collapsed = false;
-						break;
-
-					}
-
-				}
-
-				const element = document.querySelector( 'h2[data-category="' + key + '"]' );
-
-				if ( collapsed ) {
-
-					element.classList.add( 'hidden' );
-
-				} else {
-
-					element.classList.remove( 'hidden' );
-
-				}
-
-			}
-
-		}
-
-		function extractQuery() {
-
-			const search = window.location.search;
-
-			if ( search.indexOf( '?q=' ) !== - 1 ) {
-
-				return decodeURI( search.substr( 3 ) );
-
-			}
-
-			return '';
-
-		}
-
-		function createElementFromHTML( htmlString ) {
-
-			const div = document.createElement( 'div' );
-			div.innerHTML = htmlString.trim();
-			return div.firstChild;
-
-		}
 
 		</script>
-
 	</body>
 </html>
