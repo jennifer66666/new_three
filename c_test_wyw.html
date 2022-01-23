@@ -49,9 +49,21 @@
 
 				scene = new THREE.Scene();
 
-				const dirLight = new THREE.DirectionalLight( 0xffffff );
-				dirLight.position.set( 0, 0, 1 );
-				scene.add( dirLight );
+                var spotLight = new THREE.SpotLight(0xffffff);
+                spotLight.position.set(-10, 30, 40);
+                spotLight.shadow.mapSize.width = 2048;
+                spotLight.shadow.mapSize.height = 2048;
+                spotLight.shadow.camera.fov = 15;
+                spotLight.castShadow = true;
+                spotLight.decay = 2;
+                spotLight.penumbra = 0.05;
+                spotLight.name = "spotLight"
+
+                scene.add(spotLight);
+
+                var ambientLight = new THREE.AmbientLight(0x343434);
+                ambientLight.name = "ambientLight";
+                scene.add(ambientLight);
 
 				const axesHelper = new THREE.AxesHelper( 5 );
 				scene.add( axesHelper );
