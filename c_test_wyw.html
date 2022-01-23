@@ -42,15 +42,31 @@
                 container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
-				const EARTH_RADIUS = 1;
+				const EARTH_RADIUS = 15;
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 200 );
 				camera.position.set( 20, 10, 40 );
 
 				scene = new THREE.Scene();
 
+                //大地面
+                var planeGeometry = new THREE.PlaneGeometry(10000, 10000);
+                var planeMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xffffff
+                });
+                var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                plane.receiveShadow = true;
+
+                // rotate and position the plane
+                plane.rotation.x = -0.5 * Math.PI;
+                plane.position.x = 0;
+                plane.position.y = 0;
+                plane.position.z = 0;
+
+                scene.add(plane);
+
                 var spotLight = new THREE.SpotLight(0xffffff);
-                spotLight.position.set(-10, 30, 40);
+                spotLight.position.set(0, 30, 40);
                 spotLight.shadow.mapSize.width = 2048;
                 spotLight.shadow.mapSize.height = 2048;
                 spotLight.shadow.camera.fov = 15;
@@ -73,7 +89,7 @@
 				const earthGeometry = new THREE.SphereGeometry( EARTH_RADIUS, 16, 16 );
 				const earthMaterial = new THREE.MeshPhysicalMaterial( {
 					color: 0xffffff,
-                    transmission: 0.5,
+                    transmission: 1.0,
                     opacity: 1,
                     metalness: 0,
                     roughness: 0,
@@ -88,6 +104,7 @@
 					transparent: true
 				} );
 				const earth = new THREE.Mesh( earthGeometry, earthMaterial );
+                earth.translateY(15);
 				scene.add( earth );
 
                 
@@ -160,6 +177,7 @@
 				renderer = new THREE.WebGLRenderer();
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.setClearColor(0x463f67, 1);
 				document.body.appendChild( renderer.domElement );
 
                 const controls = new OrbitControls( camera, renderer.domElement );
@@ -172,8 +190,9 @@
 				loader.load( "./models/Horse.glb", function ( gltf ) {
 
 					mesh_horse = gltf.scene.children[ 0 ];
-					mesh_horse.scale.set( 0.002, 0.002, 0.002 );
+					mesh_horse.scale.set( 0.06, 0.06, 0.06 );
 					scene.add( mesh_horse );
+                    mesh_horse.translateY(7);
 
 					mixer = new THREE.AnimationMixer( mesh_horse );
 
